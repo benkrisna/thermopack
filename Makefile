@@ -9,7 +9,7 @@
 #=============================================================================
 # Set some general variables
 #=============================================================================
-PROC = $(shell uname -m)
+PROC = $(shell arch)
 
 # Detect OS into UNAME
 UNAME := $(shell uname 2>/dev/null || echo Unknown)
@@ -32,7 +32,7 @@ export PROC
 modes = debug profile normal optim r16 debug_irg openmp openmpprofile
 targets =
 compilers =
-default = gfortran
+default = ftn
 
 #=============================================================================
 # Define some special targets
@@ -84,31 +84,31 @@ unittests_all_openmp:
 # is available. Each real target is defined by specifying the compiler flags in
 # a variable $(mode)_$(compiler)_flags.
 ifeq ($(OSTYPE),Unix)
-  compilers += gfortran ifort
+  compilers += ftn ifort
 
-  # Define gfortran flags
+  # Define ftn flags
   gf_common := -cpp -fPIC -fdefault-real-8 -fdefault-double-8 -frecursive
   ifeq ($(PROC),arm64)
     gf_proc = -arch arm64
-    gf_march = -arch arm64 -fno-expensive-optimizations
+    gf_march = -arch arm64
   else
     gf_proc = -mieee-fp
     gf_march = -march=x86-64 -msse2
   endif
-  debug_gfortran_flags = "$(gf_proc) $(gf_common) \
+  debug_ftn_flags = "$(gf_proc) $(gf_common) \
                           -g -fbounds-check -fbacktrace \
                           -ffpe-trap=invalid,zero,overflow \
                           -Wno-unused-dummy-argument -Wall" \
                          NOWARN_FFLAGS="-Wno-all"
-  profile_gfortran_flags = "$(gf_common) -g -pg"
-  normal_gfortran_flags  = "$(gf_common)"
-  optim_gfortran_flags   = "$(gf_common) -O3 $(gf_march) -funroll-loops"
-  openmp_gfortran_flags  = $(optim_gfortran_flags)" -fopenmp -frecursive"
-  openmpprofile_gfortran_flags = "$(gf_common) -fopenmp -frecursive -gomp"
+  profile_ftn_flags = "$(gf_common) -g -pg"
+  normal_ftn_flags  = "$(gf_common)"
+  optim_ftn_flags   = "$(gf_common) -O3 $(gf_march) -funroll-loops"
+  openmp_ftn_flags  = $(optim_ftn_flags)" -fopenmp -frecursive"
+  openmpprofile_ftn_flags = "$(gf_common) -fopenmp -frecursive -gomp"
 
   # Define ifort flags
   ifneq ($(shell command -v ifort 2> /dev/null),)
-    # Make script freeze when running "ifort --version" without contact to licence server
+    # Make script freeze when runnign "ifort --version" without contact to licence server
     ifneq ($(shell timeout 0.2 ifort --version 2> /dev/null),)
       compilers += ifort
       omp_ifort = "-openmp"
@@ -132,25 +132,25 @@ ifeq ($(OSTYPE),Unix)
   openmp_ifort_flags = "-fpp $(omp_ifort) -r8 -O3 -ax -fp-model precise -fpe0 -w -ftz -auto -fPIC -no-wrap-margin"
 
 else ifeq ($(OSTYPE),MINGW)
-  compilers += gfortran
+  compilers += ftn
 
-  # Define gfortran flags
+  # Define ftn flags
   gf_common := -cpp -fPIC -fdefault-real-8 -fdefault-double-8
-  debug_gfortran_flags  = "$(gf_common) -fbounds-check -Wall -g \
+  debug_ftn_flags  = "$(gf_common) -fbounds-check -Wall -g \
                            -ffpe-trap=invalid,zero,overflow -mieee-fp"
-  normal_gfortran_flags = "$(gf_common)"
-  optim_gfortran_flags = "$(gf_common) -O3 -funroll-loops"
+  normal_ftn_flags = "$(gf_common)"
+  optim_ftn_flags = "$(gf_common) -O3 -funroll-loops"
 endif
 
 #=============================================================================
 # Define the targets
 #=============================================================================
 # 'create_targets_phony' is a canned sequence that defines phony targets. For
-# instance, it links the phony target "debug_gfortran" to the actual target
-# "debug_gfortran_Linux".
+# instance, it links the phony target "debug_ftn" to the actual target
+# "debug_ftn_Linux".
 #
 # 'create_targets_real' is a canned sequence that defines real targets, such as
-# "debug_gfortran_Linux".
+# "debug_ftn_Linux".
 #
 # Note:
 # * When the corresponding flags for the specified compiler and mode are not

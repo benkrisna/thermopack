@@ -163,10 +163,28 @@ subroutine thermopack_init_c(eos,mixing,alpha,comp_string,&
 
 end subroutine thermopack_init_c
 
+!-----------------------------------------------------------------!
+subroutine thermopack_sound_velocity_2ph_c(T,P,X,Y,Z,betaV,betaL,phase,sos) BIND(C)
+!-----------------------------------------------------------------!
+  use, intrinsic :: ISO_C_BINDING
+  use speed_of_sound, only: sound_velocity_2ph
+  use thermopack_var, only: nc
+  implicit none
+  ! Input:
+  real(C_double), intent(in) :: T,P,X(nc),Y(nc),Z(nc),betaV,betaL
+  integer(C_int), intent(in) :: phase
+  ! Output:
+  real(C_double), intent(out) :: sos
+
+  sos =  sound_velocity_2ph(T,P,X,Y,Z,betaV,betaL,phase)
+
+end subroutine thermopack_sound_velocity_2ph_c
+!-----------------------------------------------------------------!
+
 
 !-----------------------------------------------------------------!
 subroutine thermopack_TPflash_c(T,P,x_overall,beta,phase,comp_liquid,comp_vapor) BIND(C)
-  !---------------------------------------------------------------!
+!---------------------------------------------------------------!
   use, intrinsic :: ISO_C_BINDING
   use tp_solver, only: twoPhaseTPflash
   use thermopack_var, only: nc
@@ -249,7 +267,7 @@ subroutine thermopack_UVflash_c(t,p,z,beta,x,y,uspec,vspec,iphase,ierr) BIND(C)
   !---------------------------------------------------------------!
   real :: betaL
   logical :: isConverged
-  ! call twoPhaseUVflash(t,p,z,beta,x,y,uspec,vspec,iphase)
+  ! call twoPhaseUVflash(t,p,z,beta,betaL,x,y,uspec,vspec,iphase)
   call twoPhaseUVflashNested(t,p,z,beta,betaL,x,y,uspec,vspec,iphase,isConverged)
   if (isConverged) then
     ierr = 0
@@ -496,7 +514,7 @@ end subroutine thermopack_wilsonK_c
 !-----------------------------------------------------------------!
 
 !-----------------------------------------------------------------!
-subroutine thermopack_getCriticalParam_c(i,tci,pci,oi) BIND(C)
+subroutine thermopack_getCriticalParam_c(i,tci,pci,oi,vci) BIND(C)
   !---------------------------------------------------------------!
   !> External interface for the getCriticalParam
   !> routine in eos.f90
@@ -511,8 +529,9 @@ subroutine thermopack_getCriticalParam_c(i,tci,pci,oi) BIND(C)
   real(C_double), intent(out) :: tci !< K - Critical temperature
   real(C_double), intent(out) :: pci !< Pa - Critical pressure
   real(C_double), intent(out) :: oi  !< Acentric factor
+  real(C_double), intent(out), optional :: vci  !< m3/mol - Critical volume
   !---------------------------------------------------------------!
-  call getCriticalParam(i,tci,pci,oi)
+  call getCriticalParam(i,tci,pci,oi,vci)
   !---------------------------------------------------------------!
 end subroutine thermopack_getCriticalParam_c
 !-----------------------------------------------------------------!
@@ -578,6 +597,28 @@ subroutine thermopack_entropy_tv_c(t,v,n,s) BIND(C)
   call entropy_tv(t,v,n,s)
   !---------------------------------------------------------------!
 end subroutine thermopack_entropy_tv_c
+
+!-----------------------------------------------------------------!
+subroutine thermopack_energy_tv_c(t,v,n,e) BIND(C)
+  !---------------------------------------------------------------!
+  !> External interface for the internal energy routine
+  !> in eosTV.f90
+  !> Notes: Optional arguments not included here.
+  !> \author NL, 2024-03-08
+  !---------------------------------------------------------------!
+  use, intrinsic :: ISO_C_BINDING
+  use eosTV, only: internal_energy_tv
+  use thermopack_var, only: nc
+  implicit none
+  !Input:
+  real(C_double), intent(in) :: t !< K - Temperature
+  real(C_double), intent(in) :: v !< m3 - Volume
+  real(C_double), dimension(1:nc), intent(in) :: n !< Mol numbers
+  real(C_double), intent(out) :: e !< J - Energy
+  !---------------------------------------------------------------!
+  call internal_energy_tv(t,v,n,e)
+  !---------------------------------------------------------------!
+end subroutine thermopack_energy_tv_c
 
 !> Interface to enthalpy accepting C types as arguments
 !! \author MH, 2019-04
@@ -773,3 +814,108 @@ subroutine thermopack_comp_name_c(i,comp_name) BIND(C)
   comp_name = c_loc(fstring)
   !-----------------------------------------------------------------!
 end subroutine thermopack_comp_name_c
+
+!-----------------------------------------------------------------!
+subroutine thermopack_chemical_potential_tv_c(t,v,n,mu,dmudn) BIND(C)
+  !---------------------------------------------------------------!
+  !> External interface for the chemical potential routine
+  !> in eosTV.f90
+  !> Notes: Optional arguments not included here.
+  !> \author BK, 2024-09-18
+  !---------------------------------------------------------------!
+  use, intrinsic :: ISO_C_BINDING
+  use eosTV, only: chemical_potential_tv
+  use thermopack_var, only: nc
+  implicit none
+  !Input:
+  real(C_double), intent(in) :: t !< K - Temperature
+  real(C_double), intent(in) :: v !< m3 - Volume
+  real(C_double), dimension(1:nc), intent(in) :: n !< Mol numbers
+  real(C_double), dimension(1:nc),              intent(out) :: mu !< J/mol
+  real(C_double), dimension(1:nc,1:nc), optional, intent(out) :: dmudn !< J/mol^2
+  real(C_double), dimension(1:nc) :: dmudt !< J/mol/K
+  real(C_double), dimension(1:nc) :: dmudv !< J/mol/m3
+  !---------------------------------------------------------------!
+  call chemical_potential_tv(t,v,n,mu,dmudt,dmudv,dmudn)
+  !---------------------------------------------------------------!
+end subroutine thermopack_chemical_potential_tv_c
+
+!-----------------------------------------------------------------!
+subroutine thermopack_helmholtz_energy_tv_c(t,v,n,f,dfdn) BIND(C)
+  !---------------------------------------------------------------!
+  !> External interface for the chemical potential routine
+  !> in eosTV.f90
+  !> Notes: Optional arguments not included here.
+  !> \author BK, 2024-09-18
+  !---------------------------------------------------------------!
+  use, intrinsic :: ISO_C_BINDING
+  use eosTV, only: free_energy_tv
+  use thermopack_var, only: nc
+  implicit none
+  !Input:
+  real(C_double), intent(in) :: t !< K - Temperature
+  real(C_double), intent(in) :: v !< m3 - Volume
+  real(C_double), dimension(1:nc), intent(in) :: n !< Mol numbers
+  real(C_double),                  intent(out) :: f !< J
+  real(C_double), dimension(1:nc), optional, intent(out) :: dfdn !< J/mol
+  real(C_double)                  :: dfdt !< J/K
+  real(C_double)                  :: dfdv !< J/m3
+  !---------------------------------------------------------------!
+  call free_energy_tv(t,v,n,f,dfdt,dfdv,dfdn)
+  !---------------------------------------------------------------!
+end subroutine thermopack_helmholtz_energy_tv_c
+
+!-----------------------------------------------------------------!
+subroutine thermopack_get_covolumes_c(b) BIND(C)
+  !---------------------------------------------------------------!
+  !> External interface for the covolume
+  !> Notes: Optional arguments not included here.
+  !> \author BK, 2024-09-18
+  !---------------------------------------------------------------!
+  use, intrinsic :: ISO_C_BINDING
+  use cubic_eos, only: get_covolumes
+  use thermopack_var, only: nc
+  implicit none
+  !Input:
+  real(C_double), dimension(1:nc), intent(out) :: b !< covolume (L/mol)
+  !---------------------------------------------------------------!
+  call get_covolumes(b)
+  !---------------------------------------------------------------!
+end subroutine thermopack_get_covolumes_c
+
+!-----------------------------------------------------------------!
+subroutine thermopack_get_energy_constants_c(a) BIND(C)
+  !---------------------------------------------------------------!
+  !> External interface for the energy constants
+  !> Notes: Optional arguments not included here.
+  !> \author BK, 2024-09-18
+  !---------------------------------------------------------------!
+  use, intrinsic :: ISO_C_BINDING
+  use cubic_eos, only: get_energy_constants
+  use thermopack_var, only: nc
+  implicit none
+  !Input:
+  real(C_double), dimension(1:nc), intent(out) :: a ! energy constants [Pa*L^2/mol^2]
+  !---------------------------------------------------------------!
+  call get_energy_constants(a)
+  !---------------------------------------------------------------!
+end subroutine thermopack_get_energy_constants_c
+
+!-----------------------------------------------------------------!
+subroutine thermopack_get_acentric_factor_c(omega) BIND(C)
+  !---------------------------------------------------------------!
+  !> External interface for the Acentric factor [-]
+  !> Notes: Optional arguments not included here.
+  !> \author BK, 2024-09-18
+  !---------------------------------------------------------------!
+  use, intrinsic :: ISO_C_BINDING
+  use cubic_eos, only: get_acentric_factor
+  use thermopack_var, only: nc
+  implicit none
+  !Input:
+  real(C_double), dimension(1:nc), intent(out) :: omega ! acentric factor [-]
+  !---------------------------------------------------------------!
+  call get_acentric_factor(omega)
+  !---------------------------------------------------------------!
+end subroutine thermopack_get_acentric_factor_c
+

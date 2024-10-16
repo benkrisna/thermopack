@@ -33,11 +33,16 @@ extern "C" {
   void ISO_C_METHOD(thermopack_init_c)(const char* eos, const char* mixing,
 				       const char* alpha, const char* comp_string,
 				       int* nphases,
-				       /*Optionals, set to NULL (int/double) and "" (const char*) if not available: */
+				       /*Optionals, set to NULL if not available: */
 				       int* liq_vap_discr_method_in,
 				       const char* csp_eos, const char* csp_ref_comp,
 				       const char* kij_ref, const char* alpha_ref,
 				       const char* saft_ref, double* b_exponent);
+  //---------------------------------------------------------------------//
+  void ISO_C_METHOD(thermopack_sound_velocity_2ph_c)(const double* t, const double* p,
+            const double x[], const double y[], const double z[],
+            const double* betaV, const double* betaL, const int* phase,
+            double* sos);
   //---------------------------------------------------------------------//
   void ISO_C_METHOD(thermopack_tpflash_c)(const double* t, const double* p,
 					  const double x_overall[],
@@ -81,7 +86,7 @@ extern "C" {
 					   double* p);
   //---------------------------------------------------------------------//
   void ISO_C_METHOD(thermopack_getcriticalparam_c)(const int* i, double* tci, double* pci,
-						   double* oi);
+						   double* oi, double* vci=nullptr);
   //---------------------------------------------------------------------//
   void ISO_C_METHOD(get_phase_flags_c)(int* iTWOPH, int* iLIQPH, int* iVAPPH, int* iMINGIBBSPH,
 				       int* iSINGLEPH, int* iSOLIDPH, int* iFAKEPH);
@@ -89,6 +94,12 @@ extern "C" {
   void ISO_C_METHOD(thermopack_compmoleweight_c)(const int* j, double* mw);
   //---------------------------------------------------------------------//
   void ISO_C_METHOD(thermopack_entropy_tv_c)(const double* t, const double* v, const double n[], double* s);
+  //---------------------------------------------------------------------//
+  void ISO_C_METHOD(thermopack_energy_tv_c)(const double* t, const double* v, const double n[], double* e);
+  //---------------------------------------------------------------------//
+  void ISO_C_METHOD(thermopack_chemical_potential_tv_c)(const double* t, const double* v, const double n[], double mu[], double* dmudn);
+  //---------------------------------------------------------------------//
+  void ISO_C_METHOD(thermopack_helmholtz_energy_tv_c)(const double* t, const double* v, const double n[], double * f, double* dfdn);
   //---------------------------------------------------------------------//
   void ISO_C_METHOD(thermopack_wilsonki_c)(const int* i, const double* t, const double* p,
 					   const double* lnPhi_offset, double* k);
@@ -119,6 +130,12 @@ extern "C" {
 
   //---------------------------------------------------------------------//
   void ISO_C_METHOD(thermopack_comp_name_c)(const int* i, char** compname);
+  //---------------------------------------------------------------------//
+  void ISO_C_METHOD(thermopack_get_covolumes_c)(double* b);
+  //---------------------------------------------------------------------//
+  void ISO_C_METHOD(thermopack_get_energy_constants_c)(double* a);
+  //---------------------------------------------------------------------//
+  void ISO_C_METHOD(thermopack_get_acentric_factor_c)(double* omega);
 
   //---------------------------------------------------------------------//
   // Module interface
@@ -128,17 +145,21 @@ extern "C" {
 					/*Optionals, set to NULL if undesired: */
 					const double* dpdv,
 					const double* dpdt, const double* d2pdv2,
-					const double dpdn[], const int* contribution);
+					const double dpdn[], const int* recalculate);
 
   //---------------------------------------------------------------------//
   // Module parameters/variables
   //---------------------------------------------------------------------//
-  #define RGAS MODULE_METHOD(thermopack_var, rgas)
-    extern double RGAS;
-  #define TMAX MODULE_METHOD(thermopack_var, tptmax)
-    extern double TMAX;
-  #define TMIN MODULE_METHOD(thermopack_var, tptmin)
-    extern double TMIN;
+
+// #define RGAS MODULE_METHOD(thermopack_constants, rgas)
+//   extern double RGAS;
+// #define TMAX MODULE_METHOD(thermopack_constants, tptmax)
+//     extern double TMAX;
+// #define TMIN MODULE_METHOD(thermopack_constants, tptmin)
+//     extern double TMIN;
+const double RGAS = 6.02214076e23 * 1.380649e-23;
+const double TMIN = 100.;
+const double TMAX = 2000.;
 
 #endif ///*thermopack_h_included */
 
